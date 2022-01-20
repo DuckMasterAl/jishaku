@@ -13,8 +13,8 @@ The jishaku guild-related commands.
 
 import typing
 
-import discord
-from discord.ext import commands
+import disnake as discord
+from disnake.ext import commands
 
 from jishaku.features.baseclass import Feature
 
@@ -57,7 +57,7 @@ class GuildFeature(Feature):
         for i in range(0, len(array), chunk_size):
             yield array[i:i + chunk_size]
 
-    @Feature.Command(parent="jsk", name="permtrace", message_command=True, slash_command=False)
+    @Feature.Command(parent="jsk", name="permtrace")
     async def jsk_permtrace(
         self, ctx: commands.Context,
         channel: typing.Union[discord.TextChannel, discord.VoiceChannel],

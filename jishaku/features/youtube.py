@@ -11,9 +11,9 @@ The jishaku youtube-dl command.
 
 """
 
-import discord
+import disnake as discord
 import youtube_dl
-from discord.ext import commands
+from disnake.ext import commands
 
 from jishaku.features.baseclass import Feature
 from jishaku.features.voice import VoiceFeature
@@ -41,7 +41,7 @@ class YouTubeFeature(Feature):
     Feature containing the youtube-dl command
     """
 
-    @Feature.Command(parent="jsk_voice", name="youtube_dl", aliases=["youtubedl", "ytdl", "yt"], message_command=True, slash_command=False)
+    @Feature.Command(parent="jsk_voice", name="youtube_dl", aliases=["youtubedl", "ytdl", "yt"])
     async def jsk_vc_youtube_dl(self, ctx: commands.Context, *, url: str):
         """
         Plays audio from youtube_dl-compatible sources.
