@@ -13,6 +13,8 @@ The conventional way to add the cog is by using the module as an extension:
 .. code:: python3
 
     bot.load_extension('jishaku')
+    # or
+    await bot.load_extension("jishaku")
 
 You could also create your own extension to load the ``Jishaku`` cog, but this is not recommended:
 
@@ -284,7 +286,18 @@ Commands
 
     .. currentmodule:: jishaku.paginators
 
-    The output is always sent as a :class:`PaginatorInterface`.
+    The output is sent as a file if the sender is detected to be on desktop, else,
+    it is always sent as a :class:`PaginatorInterface`.
+
+
+.. py:function:: jsk [disassemble|dis] <argument: str>
+
+    Compiles Python code into its Abstract Syntax Tree using :func:`ast.compile`, and then formats it into a visual ASCII tree, with ANSI support if it is usable.
+
+    .. currentmodule:: jishaku.paginators
+
+    The output is sent as a file if the sender is detected to be on desktop, else,
+    it is always sent as a :class:`PaginatorInterface`.
 
 
 .. py:function:: jsk retain <toggle: bool>
@@ -378,7 +391,8 @@ Commands
 
 .. py:function:: jsk cat <file: str>
 
-    Reads out the data from a file, displaying it in a :class:`PaginatorInterface`.
+    Reads out the data from a file, displaying it as an uploaded file if the user is on desktop and the content is small enough,
+    otherwise, it displays it as a :class:`PaginatorInterface`.
 
     This command will attempt to work out the appropriate highlight.js language from the shebang (if present) or file extension,
     and will highlight the codeblock accordingly.
@@ -389,7 +403,8 @@ Commands
 
 .. py:function:: jsk curl <url: str>
 
-    Downloads a file from a URL, displaying the contents in a :class:`PaginatorInterface`.
+    Downloads a file from a URL, displaying it as an uploaded file if the user is on desktop and the content is small enough,
+    otherwise, it displays it as a :class:`PaginatorInterface`.
 
     This command will attempt to work out the appropriate highlight.js language from the MIME type or URL
     and will highlight the codeblock accordingly.
@@ -398,7 +413,8 @@ Commands
 
 .. py:function:: jsk source <command_name: str>
 
-    Shows the source for a command in a :class:`PaginatorInterface`.
+    Shows the source for a command, displaying it as an uploaded file if the user is on desktop and the content is small enough,
+    otherwise, it displays it as a :class:`PaginatorInterface`.
 
     This is similar to doing ``jsk cat`` on the source file, limited to the line span of the command.
 
@@ -408,3 +424,9 @@ Commands
     The latency for each pass will be shown, as well as an average and standard deviation.
 
     This command will also output the websocket latency.
+
+.. py:function:: jsk sync [guild_ids...]
+
+    Sync global or guild application commands to Discord.
+
+    Should syncing commands to a guild fail the reason will be reported in the output.

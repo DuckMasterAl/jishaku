@@ -13,8 +13,10 @@ Functions and classes for handling exceptions.
 
 import asyncio
 import subprocess
+import sys
 import traceback
 import typing
+from types import TracebackType
 
 import disnake as discord
 from disnake.ext import commands
@@ -22,7 +24,13 @@ from disnake.ext import commands
 from jishaku.flags import Flags
 
 
-async def send_traceback(destination: discord.abc.Messageable, verbosity: int, *exc_info):
+async def send_traceback(
+    destination: typing.Union[discord.abc.Messageable, discord.Message],
+    verbosity: int,
+    etype: typing.Type[BaseException],
+    value: BaseException,
+    trace: TracebackType
+):
     """
     Sends a traceback of an exception to a destination.
     Used when REPL fails for any reason.
@@ -33,9 +41,6 @@ async def send_traceback(destination: discord.abc.Messageable, verbosity: int, *
     :return: The last message sent
     """
 
-    # to make pylint stop moaning
-    etype, value, trace = exc_info
-
     traceback_content = "".join(traceback.format_exception(etype, value, trace, verbosity)).replace("``", "`\u200b`")
 
     paginator = commands.Paginator(prefix='```py')
@@ -45,12 +50,24 @@ async def send_traceback(destination: discord.abc.Messageable, verbosity: int, *
     message = None
 
     for page in paginator.pages:
-        message = await destination.send(page)
+        if isinstance(destination, discord.Message):
+            message = await destination.reply(page)
+        else:
+            message = await destination.send(page)
 
     return message
 
 
-async def do_after_sleep(delay: float, coro, *args, **kwargs):
+T = typing.TypeVar('T')
+
+if sys.version_info < (3, 10):
+    from typing_extensions import ParamSpec
+    P = ParamSpec('P')
+else:
+    P = typing.ParamSpec('P')  # pylint: disable=no-member
+
+
+async def do_after_sleep(delay: float, coro: typing.Callable[P, typing.Awaitable[T]], *args: P.args, **kwargs: P.kwargs) -> T:
     """
     Performs an action after a set amount of time.
 
@@ -67,8 +84,10 @@ async def do_after_sleep(delay: float, coro, *args, **kwargs):
     return await coro(*args, **kwargs)
 
 
-async def attempt_add_reaction(msg: discord.Message, reaction: typing.Union[str, discord.Emoji])\
-        -> typing.Optional[discord.Reaction]:
+async def attempt_add_reaction(
+    msg: discord.Message,
+    reaction: typing.Union[str, discord.Emoji]
+) -> typing.Optional[discord.Reaction]:
     """
     Try to add a reaction to a message, ignoring it if it fails for any reason.
 
@@ -82,10 +101,11 @@ async def attempt_add_reaction(msg: discord.Message, reaction: typing.Union[str,
         pass
 
 
-class ReactionProcedureTimer:  # pylint: disable=too-few-public-methods
+class ReplResponseReactor:  # pylint: disable=too-few-public-methods
     """
-    Class that reacts to a message based on what happens during its lifetime.
+    Extension of the ReactionProcedureTimer that absorbs errors, sending tracebacks.
     """
+
     __slots__ = ('message', 'loop', 'handle', 'raised')
 
     def __init__(self, message: discord.Message, loop: typing.Optional[asyncio.BaseEventLoop] = None):
@@ -95,51 +115,52 @@ class ReactionProcedureTimer:  # pylint: disable=too-few-public-methods
         self.raised = False
 
     async def __aenter__(self):
-        self.handle = self.loop.create_task(do_after_sleep(1, attempt_add_reaction, self.message,
+        self.handle = self.loop.create_task(do_after_sleep(2, attempt_add_reaction, self.message,
                                                            "\N{BLACK RIGHT-POINTING TRIANGLE}"))
         return self
 
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
+    async def __aexit__(
+        self,
+        exc_type: typing.Type[BaseException],
+        exc_val: BaseException,
+        exc_tb: TracebackType
+    ) -> bool:
         if self.handle:
             self.handle.cancel()
 
         # no exception, check mark
         if not exc_val:
             await attempt_add_reaction(self.message, "\N{WHITE HEAVY CHECK MARK}")
-            return
+            return False
 
         self.raised = True
 
-        if isinstance(exc_val, (asyncio.TimeoutError, subprocess.TimeoutExpired)):
-            # timed out, alarm clock
-            await attempt_add_reaction(self.message, "\N{ALARM CLOCK}")
-        elif isinstance(exc_val, SyntaxError):
-            # syntax error, single exclamation mark
-            await attempt_add_reaction(self.message, "\N{HEAVY EXCLAMATION MARK SYMBOL}")
-        else:
-            # other error, double exclamation mark
-            await attempt_add_reaction(self.message, "\N{DOUBLE EXCLAMATION MARK}")
-
-
-class ReplResponseReactor(ReactionProcedureTimer):  # pylint: disable=too-few-public-methods
-    """
-    Extension of the ReactionProcedureTimer that absorbs errors, sending tracebacks.
-    """
-
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
-        await super().__aexit__(exc_type, exc_val, exc_tb)
-
-        # nothing went wrong, who cares lol
-        if not exc_val:
-            return
-
         if isinstance(exc_val, (SyntaxError, asyncio.TimeoutError, subprocess.TimeoutExpired)):
             # short traceback, send to channel
-            await send_traceback(self.message.channel, 0, exc_type, exc_val, exc_tb)
+            destination = Flags.traceback_destination(self.message) or self.message.channel
+
+            if destination != self.message.channel:
+                await attempt_add_reaction(
+                    self.message,
+                    # timed out is alarm clock
+                    # syntax error is single exclamation mark
+                    "\N{HEAVY EXCLAMATION MARK SYMBOL}" if isinstance(exc_val, SyntaxError) else "\N{ALARM CLOCK}"
+                )
+
+            await send_traceback(
+                self.message if destination == self.message.channel else destination,
+                0, exc_type, exc_val, exc_tb
+            )
         else:
+            destination = Flags.traceback_destination(self.message) or self.message.author
+
+            if destination != self.message.channel:
+                # other error, double exclamation mark
+                await attempt_add_reaction(self.message, "\N{DOUBLE EXCLAMATION MARK}")
+
             # this traceback likely needs more info, so increase verbosity, and DM it instead.
             await send_traceback(
-                self.message.channel if Flags.NO_DM_TRACEBACK else self.message.author,
+                self.message if destination == self.message.channel else destination,
                 8, exc_type, exc_val, exc_tb
             )
 

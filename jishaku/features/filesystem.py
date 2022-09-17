@@ -18,12 +18,12 @@ import re
 
 import aiohttp
 import disnake as discord
-from disnake.ext import commands
 
 from jishaku.exception_handling import ReplResponseReactor
 from jishaku.features.baseclass import Feature
 from jishaku.hljs import get_language, guess_file_traits
 from jishaku.paginators import PaginatorInterface, WrappedFilePaginator, use_file_check
+from jishaku.types import ContextA
 
 
 class FilesystemFeature(Feature):
@@ -34,7 +34,7 @@ class FilesystemFeature(Feature):
     __cat_line_regex = re.compile(r"(?:\.\/+)?(.+?)(?:#L?(\d+)(?:\-L?(\d+))?)?$")
 
     @Feature.Command(parent="jsk", name="cat")
-    async def jsk_cat(self, ctx: commands.Context, argument: str):
+    async def jsk_cat(self, ctx: ContextA, argument: str):
         """
         Read out a file, using syntax highlighting if detected.
 
@@ -84,7 +84,7 @@ class FilesystemFeature(Feature):
                             fp=file
                         ))
                 else:
-                    paginator = WrappedFilePaginator(file, line_span=line_span, max_size=1985)
+                    paginator = WrappedFilePaginator(file, line_span=line_span, max_size=1980)
                     interface = PaginatorInterface(ctx.bot, paginator, owner=ctx.author)
                     await interface.send_to(ctx)
         except UnicodeDecodeError:
@@ -93,7 +93,7 @@ class FilesystemFeature(Feature):
             return await ctx.send(f"`{path}`: Couldn't read this file, {exc}")
 
     @Feature.Command(parent="jsk", name="curl")
-    async def jsk_curl(self, ctx: commands.Context, url: str):
+    async def jsk_curl(self, ctx: ContextA, url: str):
         """
         Download and display a text file from the internet.
 
@@ -132,7 +132,7 @@ class FilesystemFeature(Feature):
                 ))
             else:
                 try:
-                    paginator = WrappedFilePaginator(io.BytesIO(data), language_hints=hints, max_size=1985)
+                    paginator = WrappedFilePaginator(io.BytesIO(data), language_hints=hints, max_size=1980)
                 except UnicodeDecodeError:
                     return await ctx.send(f"Couldn't determine the encoding of the response. (status code {code})")
                 except ValueError as exc:

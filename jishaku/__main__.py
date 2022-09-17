@@ -15,9 +15,12 @@ It can be used to perform manual administrative actions as the bot, or to test J
 
 """
 
+import asyncio
 import logging
 import sys
+import time
 import typing
+import uuid
 
 import click
 import disnake as discord
@@ -27,18 +30,47 @@ LOG_FORMAT: logging.Formatter = logging.Formatter('%(asctime)s:%(levelname)s:%(n
 LOG_STREAM: logging.Handler = logging.StreamHandler(stream=sys.stdout)
 LOG_STREAM.setFormatter(LOG_FORMAT)
 
+LOGGER = logging.getLogger('jishaku.__main__')
+
+
+async def entry(bot: commands.Bot, *args: typing.Any, **kwargs: typing.Any):
+    """
+    Async entrypoint for 2.0a compatibility
+    """
+
+    await discord.utils.maybe_coroutine(bot.load_extension, 'jishaku')  # type: ignore
+
+    try:
+        await bot.start(*args, **kwargs)
+    except KeyboardInterrupt:
+        pass
+
 
 @click.command()
 @click.argument('intents', nargs=-1)
 @click.argument('token')
-def entrypoint(intents: typing.Iterable[str], token: str):
+@click.option('--log-level', '-v', default='DEBUG')
+@click.option('--log-file', '-l', default=None)
+def entrypoint(intents: typing.Iterable[str], token: str, log_level: str, log_file: typing.Optional[str] = None):
     """
     Entrypoint accessible through `python -m jishaku <TOKEN>`
+
+    Specify intents using + and - before the token
+    E.g.:
+        -m jishaku -- +all -message_content <TOKEN>
+    Arguments are applied in order.
+    You can also set log level and output to a file:
+        -m jishaku --log-level INFO --log-file bot.log -- +all <TOKEN>
     """
 
     logger = logging.getLogger()
-    logger.setLevel(logging.DEBUG)
+    logger.setLevel(getattr(logging, log_level))
     logger.addHandler(LOG_STREAM)
+
+    if log_file:
+        log_file_handler: logging.Handler = logging.FileHandler(filename=log_file, encoding='utf-8', mode='a')
+        log_file_handler.setFormatter(LOG_FORMAT)
+        logger.addHandler(log_file_handler)
 
     intents_class = discord.Intents.default()
     all_intents = [name for name, _ in discord.Intents.all()]
@@ -79,9 +111,49 @@ def entrypoint(intents: typing.Iterable[str], token: str):
                 f"Intent argument {intent} is invalid; the intent {name} was not found."
             )
 
-    bot = commands.Bot(commands.when_mentioned, intents=intents_class)
-    bot.load_extension('jishaku')
-    bot.run(token)
+    unique_id = str(uuid.uuid4())
+    LOGGER.critical(
+        'Generated a unique UUID for this session: %s'
+        '\nYou can use Jishaku with your bot once it starts using `%s::jsk <subcommand>`'
+        '\nIf you have no message content, you can prefix it with the mention: `@Bot %s::jsk <subcommand>`',
+        unique_id, unique_id, unique_id
+    )
+
+    try:
+        import pyperclip  # type: ignore # pylint: disable=import-outside-toplevel
+    except ImportError:
+        LOGGER.critical(
+            'If you install `pyperclip`, this prefix will be copied to your clipboard automatically.'
+        )
+    else:
+        try:
+            pyperclip.copy(f'{unique_id}::jsk')  # type: ignore
+        except Exception as error:  # pylint: disable=broad-except
+            LOGGER.critical(
+                'The prefix could not be copied to your clipboard: %s',
+                error
+            )
+        else:
+            LOGGER.critical(
+                'The prefix has been copied to your clipboard.'
+            )
+
+    time.sleep(10)
+
+    def prefix(bot: commands.Bot, _: discord.Message) -> typing.List[str]:
+        return [
+            f'{unique_id}::',
+            f'<@{bot.user.id}> {unique_id}::',  # type: ignore
+            f'<@!{bot.user.id}> {unique_id}::',  # type: ignore
+        ]
+
+    bot = commands.Bot(prefix, intents=intents_class)
+
+    if discord.version_info >= (2, 0, 0):
+        asyncio.run(entry(bot, token))
+    else:
+        bot.load_extension('jishaku')  # type: ignore
+        bot.run(token)  # type: ignore
 
 
 if __name__ == '__main__':

@@ -3,6 +3,53 @@
 What's new?
 ================
 
+Version 2.5.1
+-------------
+
+This version includes:
+
+- Some fixes for changes that broke existing fork support
+- A fix for ``jsk pip`` that tries to select the right pip for the current Python when a venv is not correctly activated.
+- Additional shortcut 'scaffold' methods that allow you to easily leverage some compilers/interpreters via the shell when detected.
+- If a REPL (``jsk py``, etc) contains mentions and fails to compile as is, jishaku will attempt to substitute the mentions with a respective object. This allows you to use mentions as literals when not in a codeblock.
+- Some reaction-related functionality has been adjusted to try and avoid sending reactions when it's not necessary. This is to account for the new, slower, reaction rate limits. Note that some of these benefits only apply to 2.0a+ users.
+- An experimental ``jsk timeit`` command that attempts to do line-based timing evaluation of Python code. This isn't super reliable as is, and generally should not be used for small or absolute measurements, but rather to find large snags that could be bottlenecking.
+
+Version 2.5.0
+-------------
+
+This version adds mostly-complete strict typing to the library, supporting type checkers using the public API.
+
+``jsk sync`` has also been improved, now including a diagnostic for commands that fail to sync,
+and the ability to use ``$`` to sync global commands, ``.`` to sync the current guild, and ``*`` to sync all known guilds.
+
+Version 2.4.0
+-------------
+
+discord.py has now resumed development, and this version allows the cog to be loaded with the new 2.0a async load strategy.
+
+As it stands, jishaku will now once again handle discord.py as its first class priority for support.
+However, jishaku will still **no longer serve discord.py as a requirement** and fork-specific fixes up to this point will remain, with future ones still being considered based on their impact.
+
+It is still thus up to you what you decide to use with jishaku, and the module will not make this choice for you, but be aware that discord.py-related bugs will be prioritized for fixes over other implementations.
+
+New stuff in this release:
+
+- jishaku will now correctly provide and use async setup/add_cog/load_extension on 2.0a
+- ``__main__`` has been improved to allow you to specify a log file to output to in addition to stdout.
+- ``WrappedPaginator`` performance has been improved over tenfold, reducing lag from extremely large outputs
+- The ``jsk sync`` command has been added, allowing you to sync either your global or guild-specific app_commands.
+- ``jsk pyi`` now by default includes the help text on objects when it can find it, making it quicker to determine how to use functions and classes.
+- The ``jsk ast`` command has been added, which takes in code and produces a colourful AST breakdown tree.
+- The ``jsk`` command will now correctly detect and display the version of the source of the ``discord`` package on forks.
+- The ``jsk`` command will now show whether the ``message_content`` intent is enabled or not.
+- The ``jsk sh`` support will now attempt to preserve and properly display ANSI when it is possible to do so.
+- The ``jsk sh`` command has a new alias: ``jsk terminal``.
+- The ``jsk vc ytdl`` command will now prioritize ``yt-dlp`` when it's available to take advantage of the reduced staggering.
+- The ``ALWAYS_DM_TRACEBACK`` flag has been added to always DM tracebacks, even for syntax errors.
+- The ``USE_ANSI_ALWAYS`` and ``USE_ANSI_NEVER`` flags have been added to override ANSI use in commands that support it.
+- Typing has been improved across the module.
+
 Version 2.3.2
 -------------
 
