@@ -69,9 +69,9 @@ class RootCommand(Feature):
 
         # Try to locate what vends the `discord` package
         distributions = [
-            dist for dist in packages_distributions()['discord']
+            dist for dist in packages_distributions()['disnake']
             if any(
-                file.parts == ('discord', '__init__.py')
+                file.parts == ('disnake', '__init__.py')
                 for file in distribution(dist).files
             )
         ]
