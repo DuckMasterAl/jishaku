@@ -13,7 +13,7 @@ Paginator-related tools and interfaces for Jishaku.
 
 import typing
 
-import discord
+import disnake as discord
 
 # emoji settings, this sets what emoji are used for PaginatorInterface
 
