@@ -19,7 +19,7 @@ import typing
 from datetime import datetime, timezone
 
 import disnake as discord
-from discord.ext import commands
+from disnake.ext import commands
 
 from jishaku.types import BotT, ContextA
 
