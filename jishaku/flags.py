@@ -16,7 +16,7 @@ import inspect
 import os
 import typing
 
-import discord
+import disnake as discord
 
 from jishaku.types import ContextA
 
